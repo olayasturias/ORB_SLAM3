@@ -13,7 +13,11 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#ifdef _MSC_VER
+#include <cstdint>
+#else
 #include <stdint-gcc.h>
+#endif
 
 #include "FORB.h"
 

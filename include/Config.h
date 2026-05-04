@@ -19,7 +19,15 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include <chrono>
+#include <thread>
+static inline void usleep(unsigned int us) {
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>

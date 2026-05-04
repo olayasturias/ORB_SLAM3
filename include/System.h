@@ -21,7 +21,18 @@
 #define SYSTEM_H
 
 
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include <chrono>
+#include <thread>
+#ifndef ORB_SLAM3_USLEEP_DEFINED
+#define ORB_SLAM3_USLEEP_DEFINED
+static inline void usleep(unsigned int us) {
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+#endif
+#endif
 #include<stdio.h>
 #include<stdlib.h>
 #include<string>
