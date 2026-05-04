@@ -27,18 +27,18 @@
 #include "timeutil.h"
 #include <iostream>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <time.h>
 #include <windows.h>
 #endif
 
-#ifdef UNIX
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 
 namespace g2o {
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
   #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
 #else
@@ -102,7 +102,7 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
  
   return 0;
 }
-#endif
+#endif // _WIN32
 
 ScopeTime::ScopeTime(const char* title) : _title(title), _startTime(get_monotonic_time()) {}
 

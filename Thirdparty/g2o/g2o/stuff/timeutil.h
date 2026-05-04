@@ -27,10 +27,15 @@
 #ifndef G2O_TIMEUTIL_H
 #define G2O_TIMEUTIL_H
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <time.h>
 #else
 #include <sys/time.h>
+#endif
+
+// MSVC does not have __PRETTY_FUNCTION__; use __FUNCSIG__ instead
+#if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
+#define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
 
 #include <string>
@@ -77,12 +82,15 @@ if (1) {\
 
 namespace g2o {
 
-#ifdef _WINDOWS
+#ifdef _WIN32
+#ifndef _TIMEVAL_DEFINED
 typedef struct timeval {
   long tv_sec;
   long tv_usec;
 } timeval;
- int gettimeofday(struct timeval *tv, struct timezone *tz);
+#define _TIMEVAL_DEFINED
+#endif
+int gettimeofday(struct timeval *tv, struct timezone *tz);
 #endif
 
 /**
