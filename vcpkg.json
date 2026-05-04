@@ -1,0 +1,21 @@
+{
+  "name": "orb-slam3",
+  "version": "1.0",
+  "dependencies": [
+    {
+      "name": "opencv4",
+      "features": ["contrib"]
+    },
+    "eigen3",
+    "pangolin",
+    {
+      "name": "boost-serialization",
+      "platform": "windows"
+    },
+    {
+      "name": "boost-algorithm",
+      "platform": "windows"
+    },
+    "openssl"
+  ]
+}
