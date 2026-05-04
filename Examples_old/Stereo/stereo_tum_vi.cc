@@ -22,7 +22,9 @@
 #include<fstream>
 #include<iomanip>
 #include<chrono>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include<opencv2/core/core.hpp>
 

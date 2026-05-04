@@ -148,7 +148,7 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
             ss >> sRGB;
             ss >> t;         
 
-            vTimestamps.push_back(t/1e9d);            
+            vTimestamps.push_back(t/1e9);
             vstrImageFilenames.push_back(sRGB);
 
 

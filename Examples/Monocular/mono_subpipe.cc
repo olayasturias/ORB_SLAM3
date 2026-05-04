@@ -28,7 +28,6 @@
 #include<System.h>
 
 #include <cstring>
-#include <dirent.h>
 
 using namespace std;
 
