@@ -30,7 +30,7 @@ if (-not (Test-Path "$VcpkgRoot\vcpkg.exe")) {
     & "$VcpkgRoot\bootstrap-vcpkg.bat" -disableMetrics
 }
 
-$toolchain = "$VcpkgRoot\scripts\buildsystems\vcpkg.cmake"
+$toolchain = ("$VcpkgRoot\scripts\buildsystems\vcpkg.cmake") -replace '\\', '/'
 
 # --- Extract ORB vocabulary ---
 $vocabGz  = Join-Path $PSScriptRoot "Vocabulary\ORBvoc.txt.tar.gz"
@@ -55,6 +55,7 @@ $cmakeArgs = @(
     "-A", "x64",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchain",
     "-DVCPKG_TARGET_TRIPLET=x64-windows",
+    "-DRERUN_DOWNLOAD_AND_BUILD_ARROW=OFF",
     ".."
 )
 

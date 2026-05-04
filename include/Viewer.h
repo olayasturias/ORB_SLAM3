@@ -27,6 +27,7 @@
 #include "Settings.h"
 
 #include <mutex>
+#include <rerun.hpp>
 
 namespace ORB_SLAM3
 {
@@ -93,6 +94,8 @@ private:
     std::mutex mMutexStop;
 
     bool mbStopTrack;
+
+    rerun::RecordingStream mrec;
 
 };
 

@@ -30,6 +30,12 @@ MESSAGE("OPENCV VERSION: ${OpenCV_VERSION}")
 
 find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
+include(FetchContent)
+FetchContent_Declare(rerun_sdk
+    URL https://github.com/rerun-io/rerun/releases/download/0.31.4/rerun_cpp_sdk.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(rerun_sdk)
 find_package(Boost REQUIRED COMPONENTS serialization)
 find_package(OpenSSL REQUIRED)
 find_package(realsense2 QUIET)
@@ -125,6 +131,7 @@ DBoW2
 g2o
 Boost::serialization
 OpenSSL::Crypto
+rerun_sdk
 )
 
 # If RealSense SDK is found the library is added and its examples compiled
