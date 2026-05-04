@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 project(ORB_SLAM3)
 
 IF(NOT CMAKE_BUILD_TYPE)
@@ -7,45 +7,32 @@ ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall   -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+# C++17 required by Pangolin (structured bindings) and modern dependencies
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_definitions(-DCOMPILEDWITHC11)
 
-# Check C++14 or C++0x support
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX11)
-CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX11)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-   add_definitions(-DCOMPILEDWITHC11)
-   message(STATUS "Using flag -std=c++14.")
-elseif(COMPILER_SUPPORTS_CXX0X)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-   add_definitions(-DCOMPILEDWITHC0X)
-   message(STATUS "Using flag -std=c++0x.")
-elseif(COMPILER_SUPPORTS_CXX14)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-	add_definitions(-DCOMPILEDWITHC11) #code seems to have macros which need this
-	add_definitions(-DCOMPILEDWITHC14)
-	message(STATUS "Using flag -std=c++14.")
+if(MSVC)
+  add_compile_options(/MP /bigobj /wd4251 /wd4267 /wd4244 /wd4305 /wd4996 /wd4018 /wd4800 /wd4838 /wd4554)
+  add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
 else()
-   message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall   -O3")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
-find_package(OpenCV)
-   if(NOT OpenCV_FOUND)
-      message(FATAL_ERROR "OpenCV > 4.4 not found.")
-   endif()
+find_package(OpenCV REQUIRED)
+MESSAGE("OPENCV VERSION: ${OpenCV_VERSION}")
 
-MESSAGE("OPENCV VERSION:")
-MESSAGE(${OpenCV_VERSION})
-
-find_package(Eigen3 3.1.0 REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
-find_package(realsense2)
+find_package(Boost REQUIRED COMPONENTS serialization)
+find_package(OpenSSL REQUIRED)
+find_package(realsense2 QUIET)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -57,8 +44,20 @@ ${Pangolin_INCLUDE_DIRS}
 )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
-add_library(${PROJECT_NAME} SHARED
+# Build Thirdparty libraries as part of this project
+add_subdirectory(Thirdparty/DBoW2)
+add_subdirectory(Thirdparty/g2o)
+
+# On Windows build as static to avoid DLL export annotation requirements
+if(WIN32)
+  set(ORB_SLAM3_LIB_TYPE STATIC)
+else()
+  set(ORB_SLAM3_LIB_TYPE SHARED)
+endif()
+
+add_library(${PROJECT_NAME} ${ORB_SLAM3_LIB_TYPE}
 src/System.cc
 src/Tracking.cc
 src/LocalMapping.cc
@@ -118,16 +117,14 @@ include/SerializationUtils.h
 include/Config.h
 include/Settings.h)
 
-add_subdirectory(Thirdparty/g2o)
-
 target_link_libraries(${PROJECT_NAME}
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
-${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
-${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
--lboost_serialization
--lcrypto
+DBoW2
+g2o
+Boost::serialization
+OpenSSL::Crypto
 )
 
 # If RealSense SDK is found the library is added and its examples compiled
@@ -246,6 +243,10 @@ target_link_libraries(mono_inertial_subpipe ${PROJECT_NAME})
 add_executable(mono_inertial_tum_vi
         Examples/Monocular-Inertial/mono_inertial_tum_vi.cc)
 target_link_libraries(mono_inertial_tum_vi ${PROJECT_NAME})
+
+add_executable(mono_inertial_mimir
+        Examples/Monocular-Inertial/mono_inertial_mimir.cc)
+target_link_libraries(mono_inertial_mimir ${PROJECT_NAME})
 
 if(realsense2_FOUND)
     add_executable(mono_inertial_realsense_t265
