@@ -21,6 +21,7 @@
 #include <pangolin/pangolin.h>
 
 #include <mutex>
+#include <vector>
 
 namespace ORB_SLAM3
 {
@@ -339,6 +340,16 @@ void Viewer::Run()
 
         cv::imshow("ORB-SLAM3: Current Frame",toShow);
         cv::waitKey(mT);
+        cv::Mat rawIm = mpFrameDrawer->GetRawImage();
+        if (!rawIm.empty())
+        {
+            cv::Mat rgb;
+            cv::cvtColor(rawIm, rgb, cv::COLOR_BGR2RGB);
+            uint32_t height = static_cast<uint32_t>(rgb.rows);
+            uint32_t width  = static_cast<uint32_t>(rgb.cols);
+            std::vector<uint8_t> imgData(rgb.data, rgb.data + width * height * 3);
+            mrec.log("image", rerun::Image::from_rgb24(imgData, {width, height}));
+        }
 
         if(menuReset)
         {

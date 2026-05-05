@@ -201,6 +201,12 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
     return imWithInfo;
 }
 
+cv::Mat FrameDrawer::GetRawImage()
+{
+    unique_lock<mutex> lock(mMutex);
+    return mIm.clone();
+}
+
 cv::Mat FrameDrawer::DrawRightFrame(float imageScale)
 {
     cv::Mat im;
