@@ -366,25 +366,57 @@ void Viewer::Run()
             Map* pMap = mpMapDrawer->mpAtlas->GetCurrentMap();
             if(pMap)
             {
-                // Map points
-                const vector<MapPoint*>& vpMPs    = pMap->GetAllMapPoints();
-                const vector<MapPoint*>& vpRefMPs = pMap->GetReferenceMapPoints();
-                set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+                // Map points colored by image projection
+                cv::Mat colorIm = mpFrameDrawer->GetRawImage();
 
-                std::vector<rerun::components::Position3D> regularPts, refPts;
+                // Derive Rcw, tcw from the Pangolin Twc (column-major)
+                Eigen::Matrix3f Rwc;
+                Rwc(0,0)=(float)Twc.m[0]; Rwc(0,1)=(float)Twc.m[4]; Rwc(0,2)=(float)Twc.m[8];
+                Rwc(1,0)=(float)Twc.m[1]; Rwc(1,1)=(float)Twc.m[5]; Rwc(1,2)=(float)Twc.m[9];
+                Rwc(2,0)=(float)Twc.m[2]; Rwc(2,1)=(float)Twc.m[6]; Rwc(2,2)=(float)Twc.m[10];
+                Eigen::Matrix3f Rcw = Rwc.transpose();
+                Eigen::Vector3f tcw = -Rcw * Eigen::Vector3f((float)Twc.m[12], (float)Twc.m[13], (float)Twc.m[14]);
+
+                const vector<MapPoint*>& vpMPs = pMap->GetAllMapPoints();
+                std::vector<rerun::components::Position3D> mapPts;
+                std::vector<rerun::Color> mapColors;
+                mapPts.reserve(vpMPs.size());
+                mapColors.reserve(vpMPs.size());
+
                 for(MapPoint* mp : vpMPs)
                 {
                     if(!mp || mp->isBad()) continue;
-                    Eigen::Vector3f pos = mp->GetWorldPos();
-                    if(spRefMPs.count(mp))
-                        refPts.push_back({pos(0), pos(1), pos(2)});
-                    else
-                        regularPts.push_back({pos(0), pos(1), pos(2)});
+                    Eigen::Vector3f Xw = mp->GetWorldPos();
+
+                    rerun::Color ptColor(128, 128, 128);
+                    if(!colorIm.empty())
+                    {
+                        Eigen::Vector3f Xc = Rcw * Xw + tcw;
+                        if(Xc(2) > 0.f)
+                        {
+                            int iu = (int)std::round(Frame::fx * Xc(0) / Xc(2) + Frame::cx);
+                            int iv = (int)std::round(Frame::fy * Xc(1) / Xc(2) + Frame::cy);
+                            if(iu >= 0 && iu < colorIm.cols && iv >= 0 && iv < colorIm.rows)
+                            {
+                                if(colorIm.channels() == 1)
+                                {
+                                    uchar g = colorIm.at<uchar>(iv, iu);
+                                    ptColor = rerun::Color(g, g, g);
+                                }
+                                else
+                                {
+                                    cv::Vec3b bgr = colorIm.at<cv::Vec3b>(iv, iu);
+                                    ptColor = rerun::Color(bgr[2], bgr[1], bgr[0]);
+                                }
+                            }
+                        }
+                    }
+
+                    mapPts.push_back({Xw(0), Xw(1), Xw(2)});
+                    mapColors.push_back(ptColor);
                 }
-                mrec->log("world/map/global_map/points",
-                    rerun::Points3D(regularPts).with_colors(rerun::Color(0, 0, 0)));
-                mrec->log("world/map/active_map/points",
-                    rerun::Points3D(refPts).with_colors(rerun::Color(255, 0, 0)));
+                mrec->log("world/map/points",
+                    rerun::Points3D(mapPts).with_colors(mapColors));
 
                 // Single pass over all keyframes: graph edges, velocity, body frame, bias
                 const vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();
