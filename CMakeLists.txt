@@ -7,7 +7,7 @@ ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
-# C++17 required by Pangolin (structured bindings) and modern dependencies
+# C++17 required by modern dependencies
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -29,7 +29,6 @@ find_package(OpenCV REQUIRED)
 MESSAGE("OPENCV VERSION: ${OpenCV_VERSION}")
 
 find_package(Eigen3 REQUIRED)
-find_package(Pangolin REQUIRED)
 include(FetchContent)
 FetchContent_Declare(rerun_sdk
     URL https://github.com/rerun-io/rerun/releases/download/0.31.4/rerun_cpp_sdk.zip
@@ -46,7 +45,6 @@ ${PROJECT_SOURCE_DIR}/include
 ${PROJECT_SOURCE_DIR}/include/CameraModels
 ${PROJECT_SOURCE_DIR}/Thirdparty/Sophus
 ${EIGEN3_INCLUDE_DIR}
-${Pangolin_INCLUDE_DIRS}
 )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -126,7 +124,6 @@ include/Settings.h)
 target_link_libraries(${PROJECT_NAME}
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
-${Pangolin_LIBRARIES}
 DBoW2
 g2o
 Boost::serialization

@@ -65,7 +65,6 @@ public:
 
     //void SetTrackingPause();
 
-    bool both;
 private:
 
     bool ParseViewerParamFile(cv::FileStorage &fSettings);
@@ -80,9 +79,6 @@ private:
     // 1/fps in ms
     double mT;
     float mImageWidth, mImageHeight;
-    float mImageViewerScale;
-
-    float mViewpointX, mViewpointY, mViewpointZ, mViewpointF;
 
     bool CheckFinish();
     void SetFinish();
@@ -93,8 +89,6 @@ private:
     bool mbStopped;
     bool mbStopRequested;
     std::mutex mMutexStop;
-
-    bool mbStopTrack;
 
     std::unique_ptr<rerun::RecordingStream> mrec;
 
