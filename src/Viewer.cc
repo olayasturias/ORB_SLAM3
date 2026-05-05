@@ -173,6 +173,7 @@ void Viewer::Run()
 
     std::vector<std::array<float, 3>> mPath;
     std::set<long unsigned int> mLoggedKFBias;
+    std::string mLastStatus;
 
     pangolin::CreateWindowAndBind("ORB-SLAM3: Map Viewer",1024,768);
 
@@ -363,6 +364,16 @@ void Viewer::Run()
 
         // Rerun: log all map entities unconditionally (independent of Pangolin menu state)
         {
+            std::string status = mpFrameDrawer->GetStatusString();
+            if(status != mLastStatus)
+            {
+                rerun::TextLogLevel level = (status.find("LOST") != std::string::npos)
+                    ? rerun::TextLogLevel::Warning
+                    : rerun::TextLogLevel::Info;
+                mrec->log("slam/status", rerun::TextLog(status).with_level(level));
+                mLastStatus = status;
+            }
+
             Map* pMap = mpMapDrawer->mpAtlas->GetCurrentMap();
             if(pMap)
             {

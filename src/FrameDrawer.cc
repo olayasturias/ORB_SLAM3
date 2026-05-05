@@ -213,6 +213,31 @@ std::vector<cv::KeyPoint> FrameDrawer::GetCurrentKeypoints()
     return mvCurrentKeys;
 }
 
+std::string FrameDrawer::GetStatusString()
+{
+    unique_lock<mutex> lock(mMutex);
+    stringstream s;
+    if(mState == Tracking::SYSTEM_NOT_READY)
+        s << "LOADING ORB VOCABULARY. PLEASE WAIT...";
+    else if(mState == Tracking::NO_IMAGES_YET)
+        s << "WAITING FOR IMAGES";
+    else if(mState == Tracking::NOT_INITIALIZED)
+        s << "TRYING TO INITIALIZE";
+    else if(mState == Tracking::OK)
+    {
+        s << (mbOnlyTracking ? "LOCALIZATION | " : "SLAM MODE | ");
+        s << "Maps: " << mpAtlas->CountMaps()
+          << ", KFs: "  << mpAtlas->KeyFramesInMap()
+          << ", MPs: "  << mpAtlas->MapPointsInMap()
+          << ", Matches: " << mnTracked;
+        if(mnTrackedVO > 0)
+            s << ", + VO matches: " << mnTrackedVO;
+    }
+    else if(mState == Tracking::LOST)
+        s << "TRACK LOST. TRYING TO RELOCALIZE";
+    return s.str();
+}
+
 cv::Mat FrameDrawer::DrawRightFrame(float imageScale)
 {
     cv::Mat im;

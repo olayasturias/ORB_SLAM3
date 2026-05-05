@@ -51,6 +51,7 @@ public:
     cv::Mat DrawRightFrame(float imageScale=1.f);
     cv::Mat GetRawImage();
     std::vector<cv::KeyPoint> GetCurrentKeypoints();
+    std::string GetStatusString();
 
     bool both;
 
