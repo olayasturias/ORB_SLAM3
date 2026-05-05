@@ -7,7 +7,6 @@
       "features": ["contrib"]
     },
     "eigen3",
-    "pangolin",
     {
       "name": "boost-serialization",
       "platform": "windows"
