@@ -172,6 +172,7 @@ void Viewer::Run()
     mbStopped = false;
 
     std::vector<std::array<float, 3>> mPath;
+    std::set<long unsigned int> mLoggedKFBias;
 
     pangolin::CreateWindowAndBind("ORB-SLAM3: Map Viewer",1024,768);
 
@@ -354,87 +355,20 @@ void Viewer::Run()
         glClearColor(1.0f,1.0f,1.0f,1.0f);
         mpMapDrawer->DrawCurrentCamera(Twc);
         if(menuShowKeyFrames || menuShowGraph || menuShowInertialGraph || menuShowOptLba)
-        {
             mpMapDrawer->DrawKeyFrames(menuShowKeyFrames, menuShowGraph, menuShowInertialGraph, menuShowOptLba);
-
-            Map* pGraphMap = mpMapDrawer->mpAtlas->GetCurrentMap();
-            if(pGraphMap)
-            {
-                const vector<KeyFrame*> vpKFs = pGraphMap->GetAllKeyFrames();
-
-                if(menuShowGraph)
-                {
-                    std::vector<rerun::components::LineStrip3D> covisLines, treeLines, loopLines;
-                    for(KeyFrame* pKF : vpKFs)
-                    {
-                        if(!pKF || pKF->isBad()) continue;
-                        Eigen::Vector3f Ow = pKF->GetCameraCenter();
-
-                        for(KeyFrame* pKF2 : pKF->GetCovisiblesByWeight(100))
-                        {
-                            if(pKF2->mnId < pKF->mnId || pKF2->isBad()) continue;
-                            Eigen::Vector3f Ow2 = pKF2->GetCameraCenter();
-                            covisLines.push_back(rerun::components::LineStrip3D(
-                                std::vector<rerun::datatypes::Vec3D>{
-                                    {Ow(0),Ow(1),Ow(2)}, {Ow2(0),Ow2(1),Ow2(2)}}));
-                        }
-
-                        KeyFrame* pParent = pKF->GetParent();
-                        if(pParent && !pParent->isBad())
-                        {
-                            Eigen::Vector3f Owp = pParent->GetCameraCenter();
-                            treeLines.push_back(rerun::components::LineStrip3D(
-                                std::vector<rerun::datatypes::Vec3D>{
-                                    {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
-                        }
-
-                        for(KeyFrame* pKFl : pKF->GetLoopEdges())
-                        {
-                            if(pKFl->mnId < pKF->mnId || pKFl->isBad()) continue;
-                            Eigen::Vector3f Owl = pKFl->GetCameraCenter();
-                            loopLines.push_back(rerun::components::LineStrip3D(
-                                std::vector<rerun::datatypes::Vec3D>{
-                                    {Ow(0),Ow(1),Ow(2)}, {Owl(0),Owl(1),Owl(2)}}));
-                        }
-                    }
-                    mrec->log("world/graph/covisibility",
-                        rerun::LineStrips3D(covisLines).with_colors(rerun::Color(0, 255, 0)));
-                    mrec->log("world/graph/spanning_tree",
-                        rerun::LineStrips3D(treeLines).with_colors(rerun::Color(0, 200, 0)));
-                    mrec->log("world/graph/loops",
-                        rerun::LineStrips3D(loopLines).with_colors(rerun::Color(255, 165, 0)));
-                }
-
-                if(menuShowInertialGraph && pGraphMap->isImuInitialized())
-                {
-                    std::vector<rerun::components::LineStrip3D> inertialLines;
-                    for(KeyFrame* pKFi : vpKFs)
-                    {
-                        if(!pKFi || pKFi->isBad()) continue;
-                        KeyFrame* pNext = pKFi->mNextKF;
-                        if(pNext && !pNext->isBad())
-                        {
-                            Eigen::Vector3f Ow  = pKFi->GetCameraCenter();
-                            Eigen::Vector3f Owp = pNext->GetCameraCenter();
-                            inertialLines.push_back(rerun::components::LineStrip3D(
-                                std::vector<rerun::datatypes::Vec3D>{
-                                    {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
-                        }
-                    }
-                    mrec->log("world/graph/inertial",
-                        rerun::LineStrips3D(inertialLines).with_colors(rerun::Color(255, 0, 0)));
-                }
-            }
-        }
         if(menuShowPoints)
-        {
             mpMapDrawer->DrawMapPoints();
 
-            Map* pActiveMap = mpMapDrawer->mpAtlas->GetCurrentMap();
-            if(pActiveMap)
+        pangolin::FinishFrame();
+
+        // Rerun: log all map entities unconditionally (independent of Pangolin menu state)
+        {
+            Map* pMap = mpMapDrawer->mpAtlas->GetCurrentMap();
+            if(pMap)
             {
-                const vector<MapPoint*>& vpMPs    = pActiveMap->GetAllMapPoints();
-                const vector<MapPoint*>& vpRefMPs = pActiveMap->GetReferenceMapPoints();
+                // Map points
+                const vector<MapPoint*>& vpMPs    = pMap->GetAllMapPoints();
+                const vector<MapPoint*>& vpRefMPs = pMap->GetReferenceMapPoints();
                 set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
 
                 std::vector<rerun::components::Position3D> regularPts, refPts;
@@ -447,17 +381,120 @@ void Viewer::Run()
                     else
                         regularPts.push_back({pos(0), pos(1), pos(2)});
                 }
-
                 mrec->log("world/map/global_map/points",
-                    rerun::Points3D(regularPts)
-                        .with_colors(rerun::Color(0, 0, 0)));
+                    rerun::Points3D(regularPts).with_colors(rerun::Color(0, 0, 0)));
                 mrec->log("world/map/active_map/points",
-                    rerun::Points3D(refPts)
-                        .with_colors(rerun::Color(255, 0, 0)));
+                    rerun::Points3D(refPts).with_colors(rerun::Color(255, 0, 0)));
+
+                // Single pass over all keyframes: graph edges, velocity, body frame, bias
+                const vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();
+
+                std::vector<rerun::components::LineStrip3D> covisLines, treeLines, loopLines, inertialLines;
+                std::vector<rerun::datatypes::Vec3D> velOrigins, velVectors;
+
+                for(KeyFrame* pKF : vpKFs)
+                {
+                    if(!pKF || pKF->isBad()) continue;
+                    Eigen::Vector3f Ow = pKF->GetCameraCenter();
+
+                    // Covisibility edges
+                    for(KeyFrame* pKF2 : pKF->GetCovisiblesByWeight(100))
+                    {
+                        if(pKF2->mnId < pKF->mnId || pKF2->isBad()) continue;
+                        Eigen::Vector3f Ow2 = pKF2->GetCameraCenter();
+                        covisLines.push_back(rerun::components::LineStrip3D(
+                            std::vector<rerun::datatypes::Vec3D>{
+                                {Ow(0),Ow(1),Ow(2)}, {Ow2(0),Ow2(1),Ow2(2)}}));
+                    }
+
+                    // Spanning tree
+                    KeyFrame* pParent = pKF->GetParent();
+                    if(pParent && !pParent->isBad())
+                    {
+                        Eigen::Vector3f Owp = pParent->GetCameraCenter();
+                        treeLines.push_back(rerun::components::LineStrip3D(
+                            std::vector<rerun::datatypes::Vec3D>{
+                                {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
+                    }
+
+                    // Loop edges
+                    for(KeyFrame* pKFl : pKF->GetLoopEdges())
+                    {
+                        if(pKFl->mnId < pKF->mnId || pKFl->isBad()) continue;
+                        Eigen::Vector3f Owl = pKFl->GetCameraCenter();
+                        loopLines.push_back(rerun::components::LineStrip3D(
+                            std::vector<rerun::datatypes::Vec3D>{
+                                {Ow(0),Ow(1),Ow(2)}, {Owl(0),Owl(1),Owl(2)}}));
+                    }
+
+                    // Inertial chain
+                    KeyFrame* pNext = pKF->mNextKF;
+                    if(pNext && !pNext->isBad())
+                    {
+                        Eigen::Vector3f Owp = pNext->GetCameraCenter();
+                        inertialLines.push_back(rerun::components::LineStrip3D(
+                            std::vector<rerun::datatypes::Vec3D>{
+                                {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
+                    }
+
+                    // IMU bias — log once per KF at its timestamp
+                    if(!mLoggedKFBias.count(pKF->mnId))
+                    {
+                        if(pKF->bImu)
+                        {
+                            IMU::Bias b = pKF->GetImuBias();
+                            float gyroNorm = std::sqrt(b.bwx*b.bwx + b.bwy*b.bwy + b.bwz*b.bwz);
+                            float accNorm  = std::sqrt(b.bax*b.bax + b.bay*b.bay + b.baz*b.baz);
+                            mrec->set_time_seconds("slam_time", pKF->mTimeStamp);
+                            mrec->log("imu/bias/gyro_norm",  rerun::Scalars(gyroNorm));
+                            mrec->log("imu/bias/accel_norm", rerun::Scalars(accNorm));
+                            mrec->reset_time();
+                        }
+
+                        mLoggedKFBias.insert(pKF->mnId);
+                    }
+
+                    // IMU body frame (separate tree — avoids transform inheritance with camera)
+                    if(pKF->bImu)
+                    {
+                        Sophus::SE3f Twb = pKF->GetImuPose();
+                        Eigen::Matrix4f TwbM = Twb.matrix();
+                        mrec->log("world/imu/" + std::to_string(pKF->mnId),
+                            rerun::archetypes::Transform3D(
+                                rerun::components::Translation3D(TwbM(0,3), TwbM(1,3), TwbM(2,3)),
+                                rerun::components::TransformMat3x3(std::array<float,9>{
+                                    TwbM(0,0), TwbM(1,0), TwbM(2,0),
+                                    TwbM(0,1), TwbM(1,1), TwbM(2,1),
+                                    TwbM(0,2), TwbM(1,2), TwbM(2,2)
+                                })
+                            )
+                        );
+                    }
+
+                    // Velocity arrows
+                    if(pKF->isVelocitySet())
+                    {
+                        Eigen::Vector3f vel = pKF->GetVelocity();
+                        velOrigins.push_back({Ow(0), Ow(1), Ow(2)});
+                        velVectors.push_back({vel(0), vel(1), vel(2)});
+                    }
+                }
+
+                mrec->log("world/graph/covisibility",
+                    rerun::LineStrips3D(covisLines).with_colors(rerun::Color(0, 255, 0)));
+                mrec->log("world/graph/spanning_tree",
+                    rerun::LineStrips3D(treeLines).with_colors(rerun::Color(0, 200, 0)));
+                mrec->log("world/graph/loops",
+                    rerun::LineStrips3D(loopLines).with_colors(rerun::Color(255, 165, 0)));
+                if(pMap->isImuInitialized())
+                    mrec->log("world/graph/inertial",
+                        rerun::LineStrips3D(inertialLines).with_colors(rerun::Color(255, 0, 0)));
+                mrec->log("world/keyframes/velocities",
+                    rerun::Arrows3D::from_vectors(velVectors)
+                        .with_origins(velOrigins)
+                        .with_colors(rerun::Color(0, 200, 255)));
             }
         }
-
-        pangolin::FinishFrame();
 
         cv::Mat toShow;
         cv::Mat im = mpFrameDrawer->DrawFrame(trackedImageScale);
