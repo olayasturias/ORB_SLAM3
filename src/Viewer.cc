@@ -22,6 +22,7 @@
 #include <rerun.hpp>
 
 #include <mutex>
+#include <set>
 #include <vector>
 
 namespace ORB_SLAM3
@@ -355,7 +356,35 @@ void Viewer::Run()
         if(menuShowKeyFrames || menuShowGraph || menuShowInertialGraph || menuShowOptLba)
             mpMapDrawer->DrawKeyFrames(menuShowKeyFrames,menuShowGraph, menuShowInertialGraph, menuShowOptLba);
         if(menuShowPoints)
+        {
             mpMapDrawer->DrawMapPoints();
+
+            Map* pActiveMap = mpMapDrawer->mpAtlas->GetCurrentMap();
+            if(pActiveMap)
+            {
+                const vector<MapPoint*>& vpMPs    = pActiveMap->GetAllMapPoints();
+                const vector<MapPoint*>& vpRefMPs = pActiveMap->GetReferenceMapPoints();
+                set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+
+                std::vector<rerun::components::Position3D> regularPts, refPts;
+                for(MapPoint* mp : vpMPs)
+                {
+                    if(!mp || mp->isBad()) continue;
+                    Eigen::Vector3f pos = mp->GetWorldPos();
+                    if(spRefMPs.count(mp))
+                        refPts.push_back({pos(0), pos(1), pos(2)});
+                    else
+                        regularPts.push_back({pos(0), pos(1), pos(2)});
+                }
+
+                mrec->log("world/map/global_map/points",
+                    rerun::Points3D(regularPts)
+                        .with_colors(rerun::Color(0, 0, 0)));
+                mrec->log("world/map/active_map/points",
+                    rerun::Points3D(refPts)
+                        .with_colors(rerun::Color(255, 0, 0)));
+            }
+        }
 
         pangolin::FinishFrame();
 
