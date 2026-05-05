@@ -354,7 +354,78 @@ void Viewer::Run()
         glClearColor(1.0f,1.0f,1.0f,1.0f);
         mpMapDrawer->DrawCurrentCamera(Twc);
         if(menuShowKeyFrames || menuShowGraph || menuShowInertialGraph || menuShowOptLba)
-            mpMapDrawer->DrawKeyFrames(menuShowKeyFrames,menuShowGraph, menuShowInertialGraph, menuShowOptLba);
+        {
+            mpMapDrawer->DrawKeyFrames(menuShowKeyFrames, menuShowGraph, menuShowInertialGraph, menuShowOptLba);
+
+            Map* pGraphMap = mpMapDrawer->mpAtlas->GetCurrentMap();
+            if(pGraphMap)
+            {
+                const vector<KeyFrame*> vpKFs = pGraphMap->GetAllKeyFrames();
+
+                if(menuShowGraph)
+                {
+                    std::vector<rerun::components::LineStrip3D> covisLines, treeLines, loopLines;
+                    for(KeyFrame* pKF : vpKFs)
+                    {
+                        if(!pKF || pKF->isBad()) continue;
+                        Eigen::Vector3f Ow = pKF->GetCameraCenter();
+
+                        for(KeyFrame* pKF2 : pKF->GetCovisiblesByWeight(100))
+                        {
+                            if(pKF2->mnId < pKF->mnId || pKF2->isBad()) continue;
+                            Eigen::Vector3f Ow2 = pKF2->GetCameraCenter();
+                            covisLines.push_back(rerun::components::LineStrip3D(
+                                std::vector<rerun::datatypes::Vec3D>{
+                                    {Ow(0),Ow(1),Ow(2)}, {Ow2(0),Ow2(1),Ow2(2)}}));
+                        }
+
+                        KeyFrame* pParent = pKF->GetParent();
+                        if(pParent && !pParent->isBad())
+                        {
+                            Eigen::Vector3f Owp = pParent->GetCameraCenter();
+                            treeLines.push_back(rerun::components::LineStrip3D(
+                                std::vector<rerun::datatypes::Vec3D>{
+                                    {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
+                        }
+
+                        for(KeyFrame* pKFl : pKF->GetLoopEdges())
+                        {
+                            if(pKFl->mnId < pKF->mnId || pKFl->isBad()) continue;
+                            Eigen::Vector3f Owl = pKFl->GetCameraCenter();
+                            loopLines.push_back(rerun::components::LineStrip3D(
+                                std::vector<rerun::datatypes::Vec3D>{
+                                    {Ow(0),Ow(1),Ow(2)}, {Owl(0),Owl(1),Owl(2)}}));
+                        }
+                    }
+                    mrec->log("world/graph/covisibility",
+                        rerun::LineStrips3D(covisLines).with_colors(rerun::Color(0, 255, 0)));
+                    mrec->log("world/graph/spanning_tree",
+                        rerun::LineStrips3D(treeLines).with_colors(rerun::Color(0, 200, 0)));
+                    mrec->log("world/graph/loops",
+                        rerun::LineStrips3D(loopLines).with_colors(rerun::Color(255, 165, 0)));
+                }
+
+                if(menuShowInertialGraph && pGraphMap->isImuInitialized())
+                {
+                    std::vector<rerun::components::LineStrip3D> inertialLines;
+                    for(KeyFrame* pKFi : vpKFs)
+                    {
+                        if(!pKFi || pKFi->isBad()) continue;
+                        KeyFrame* pNext = pKFi->mNextKF;
+                        if(pNext && !pNext->isBad())
+                        {
+                            Eigen::Vector3f Ow  = pKFi->GetCameraCenter();
+                            Eigen::Vector3f Owp = pNext->GetCameraCenter();
+                            inertialLines.push_back(rerun::components::LineStrip3D(
+                                std::vector<rerun::datatypes::Vec3D>{
+                                    {Ow(0),Ow(1),Ow(2)}, {Owp(0),Owp(1),Owp(2)}}));
+                        }
+                    }
+                    mrec->log("world/graph/inertial",
+                        rerun::LineStrips3D(inertialLines).with_colors(rerun::Color(255, 0, 0)));
+                }
+            }
+        }
         if(menuShowPoints)
         {
             mpMapDrawer->DrawMapPoints();
