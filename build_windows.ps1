@@ -3,7 +3,7 @@
 param(
     [string]$VcpkgRoot = "C:\vcpkg",
     [string]$BuildType = "Release",
-    [int]$Jobs = 0
+    [int]$Jobs = 4
 )
 
 $ErrorActionPreference = "Stop"

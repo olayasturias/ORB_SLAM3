@@ -19,6 +19,7 @@
 
 #include "Viewer.h"
 #include <pangolin/pangolin.h>
+#include <rerun.hpp>
 
 #include <mutex>
 #include <vector>
@@ -26,12 +27,14 @@
 namespace ORB_SLAM3
 {
 
+Viewer::~Viewer() = default;
+
 Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath, Settings* settings):
     both(false), mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
     mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false),
-    mrec("orb_slam3")
+    mrec(std::make_unique<rerun::RecordingStream>("orb_slam3"))
 {
-    mrec.spawn().exit_on_failure();
+    mrec->spawn().exit_on_failure();
     if(settings){
         newParameterLoader(settings);
     }
@@ -348,8 +351,17 @@ void Viewer::Run()
             uint32_t height = static_cast<uint32_t>(rgb.rows);
             uint32_t width  = static_cast<uint32_t>(rgb.cols);
             std::vector<uint8_t> imgData(rgb.data, rgb.data + width * height * 3);
-            mrec.log("image", rerun::Image::from_rgb24(imgData, {width, height}));
+            mrec->log("image", rerun::Image::from_rgb24(imgData, {width, height}));
         }
+
+        auto keypoints = mpFrameDrawer->GetCurrentKeypoints();
+        std::vector<rerun::components::Position2D> kptPositions;
+        kptPositions.reserve(keypoints.size());
+        for (const auto& kp : keypoints) {
+            kptPositions.push_back({kp.pt.x, kp.pt.y});
+        }
+
+        mrec->log("image/kpts", rerun::Points2D(kptPositions));
 
         if(menuReset)
         {

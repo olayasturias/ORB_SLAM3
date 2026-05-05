@@ -207,6 +207,12 @@ cv::Mat FrameDrawer::GetRawImage()
     return mIm.clone();
 }
 
+std::vector<cv::KeyPoint> FrameDrawer::GetCurrentKeypoints()
+{
+    unique_lock<mutex> lock(mMutex);
+    return mvCurrentKeys;
+}
+
 cv::Mat FrameDrawer::DrawRightFrame(float imageScale)
 {
     cv::Mat im;

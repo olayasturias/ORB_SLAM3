@@ -26,8 +26,10 @@
 #include "System.h"
 #include "Settings.h"
 
+#include <memory>
 #include <mutex>
-#include <rerun.hpp>
+
+namespace rerun { class RecordingStream; }
 
 namespace ORB_SLAM3
 {
@@ -43,6 +45,7 @@ class Viewer
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Viewer(System* pSystem, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Tracking *pTracking, const string &strSettingPath, Settings* settings);
+    ~Viewer();
 
     void newParameterLoader(Settings* settings);
 
@@ -95,7 +98,7 @@ private:
 
     bool mbStopTrack;
 
-    rerun::RecordingStream mrec;
+    std::unique_ptr<rerun::RecordingStream> mrec;
 
 };
 
