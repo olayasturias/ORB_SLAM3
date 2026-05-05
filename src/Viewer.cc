@@ -170,6 +170,8 @@ void Viewer::Run()
     mbFinished = false;
     mbStopped = false;
 
+    std::vector<std::array<float, 3>> mPath;
+
     pangolin::CreateWindowAndBind("ORB-SLAM3: Map Viewer",1024,768);
 
     // 3D Mouse handler requires depth testing to be enabled
@@ -255,6 +257,15 @@ void Viewer::Run()
                 })
             )
         );
+
+        if(mpTracker->mLastProcessedState == Tracking::OK)
+        {
+            mPath.push_back({(float)Twc.m[12], (float)Twc.m[13], (float)Twc.m[14]});
+            if(mPath.size() >= 2)
+                mrec->log("world/path", rerun::LineStrips3D(rerun::components::LineStrip3D(
+                    rerun::Collection<rerun::datatypes::Vec3D>::borrow(mPath)
+                )));
+        }
 
         if(mbStopTrack)
         {
