@@ -231,6 +231,31 @@ void Viewer::Run()
 
         mpMapDrawer->GetCurrentOpenGLCameraMatrix(Twc,Ow);
 
+        // K matrix column-major: col0=(fx,0,0), col1=(0,fy,0), col2=(cx,cy,1)
+        mrec->log("world/camera/image",
+            rerun::archetypes::Pinhole(
+                rerun::components::PinholeProjection(std::array<float,9>{
+                    Frame::fx,  0.f,        0.f,
+                    0.f,        Frame::fy,  0.f,
+                    Frame::cx,  Frame::cy,  1.f
+                })
+            ).with_resolution((float)mImageWidth, (float)mImageHeight)
+        );
+
+        // Twc is column-major (pangolin): m[0..2]=col0, m[4..6]=col1, m[8..10]=col2, m[12..14]=t
+        mrec->log("world/camera",
+            rerun::archetypes::Transform3D(
+                rerun::components::Translation3D(
+                    (float)Twc.m[12], (float)Twc.m[13], (float)Twc.m[14]
+                ),
+                rerun::components::TransformMat3x3(std::array<float,9>{
+                    (float)Twc.m[0], (float)Twc.m[1], (float)Twc.m[2],
+                    (float)Twc.m[4], (float)Twc.m[5], (float)Twc.m[6],
+                    (float)Twc.m[8], (float)Twc.m[9], (float)Twc.m[10]
+                })
+            )
+        );
+
         if(mbStopTrack)
         {
             menuStepByStep = true;
@@ -351,7 +376,7 @@ void Viewer::Run()
             uint32_t height = static_cast<uint32_t>(rgb.rows);
             uint32_t width  = static_cast<uint32_t>(rgb.cols);
             std::vector<uint8_t> imgData(rgb.data, rgb.data + width * height * 3);
-            mrec->log("image", rerun::Image::from_rgb24(imgData, {width, height}));
+            mrec->log("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {width, height}));
         }
 
         auto keypoints = mpFrameDrawer->GetCurrentKeypoints();
@@ -361,7 +386,7 @@ void Viewer::Run()
             kptPositions.push_back({kp.pt.x, kp.pt.y});
         }
 
-        mrec->log("image/kpts", rerun::Points2D(kptPositions));
+        mrec->log("world/camera/image/rgb/kpts", rerun::Points2D(kptPositions));
 
         if(menuReset)
         {
