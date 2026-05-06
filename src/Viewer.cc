@@ -220,7 +220,7 @@ void Viewer::Run()
                     globalColors.push_back(ptColor);
                 }
             }
-            mrec->log("world/map/global_map/points",
+            mrec->log_static("world/map/global_map/points",
                 rerun::Points3D(globalPts).with_colors(globalColors));
             mrec->log("world/map/active_map/points",
                 rerun::Points3D(activePts).with_colors(rerun::Color(0, 255, 0)));
@@ -310,7 +310,7 @@ void Viewer::Run()
                 }
             }
 
-            mrec->log("world/graph/covisibility",
+            mrec->log_static("world/graph/covisibility",
                 rerun::LineStrips3D(covisLines).with_colors(rerun::Color(0, 255, 0)));
             mrec->log("world/graph/spanning_tree",
                 rerun::LineStrips3D(treeLines).with_colors(rerun::Color(0, 200, 0)));
@@ -338,7 +338,7 @@ void Viewer::Run()
             uint32_t h = static_cast<uint32_t>(rgb.rows);
             uint32_t w = static_cast<uint32_t>(rgb.cols);
             std::vector<uint8_t> imgData(rgb.data, rgb.data + w * h * 3);
-            mrec->log("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
+            mrec->log_static("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
         }
 
         auto keypoints = mpFrameDrawer->GetCurrentKeypoints();
