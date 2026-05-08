@@ -153,9 +153,9 @@ def _load_ref_aqualoc(exe_args: list) -> "np.ndarray | None":
     seq_int = int(seq_num)
 
     gt_candidates = [
-        dataset_path.parent / "archaeo_groundtruth_files"
+        dataset_path / "archaeo_groundtruth_files"
             / f"new_archaeo_colmap_traj_sequence_{seq_int:02d}.txt",
-        dataset_path.parent / "harbor_groundtruth_files"
+        dataset_path / "harbor_groundtruth_files"
             / f"new_harbor_colmap_traj_sequence_{seq_int:02d}.txt",
         dataset_path / "raw_data"
             / f"new_archaeo_colmap_traj_sequence_{seq_num}.txt",
@@ -170,8 +170,8 @@ def _load_ref_aqualoc(exe_args: list) -> "np.ndarray | None":
     # Build frame -> timestamp_s map
     csv_candidates = [
         dataset_path / "raw_data" / f"img_sequence_{seq_num}.csv",
-        dataset_path.parent / f"img_sequence_{seq_int:02d}.csv",
-        dataset_path.parent / f"harbor_img_sequence_{seq_int:02d}.csv",
+        dataset_path / "raw_data"/ f"img_sequence_{seq_int:02d}.csv",
+        dataset_path / "raw_data" / f"harbor_img_sequence_{seq_int:02d}.csv",
     ]
     img_csv = next((p for p in csv_candidates if p.exists()), None)
 
@@ -246,6 +246,235 @@ def _load_ref_euroc(exe_args: list) -> "np.ndarray | None":
     return np.column_stack([timestamps, positions, q_xyzw])
 
 
+def _rotmat_to_quat(R: "np.ndarray") -> "np.ndarray":
+    """3x3 rotation matrix → (qx, qy, qz, qw) via Shepperd's method."""
+    trace = R[0, 0] + R[1, 1] + R[2, 2]
+    if trace > 0:
+        s = 0.5 / np.sqrt(trace + 1.0)
+        w = 0.25 / s
+        x = (R[2, 1] - R[1, 2]) * s
+        y = (R[0, 2] - R[2, 0]) * s
+        z = (R[1, 0] - R[0, 1]) * s
+    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
+        w = (R[2, 1] - R[1, 2]) / s
+        x = 0.25 * s
+        y = (R[0, 1] + R[1, 0]) / s
+        z = (R[0, 2] + R[2, 0]) / s
+    elif R[1, 1] > R[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
+        w = (R[0, 2] - R[2, 0]) / s
+        x = (R[0, 1] + R[1, 0]) / s
+        y = 0.25 * s
+        z = (R[1, 2] + R[2, 1]) / s
+    else:
+        s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
+        w = (R[1, 0] - R[0, 1]) / s
+        x = (R[0, 2] + R[2, 0]) / s
+        y = (R[1, 2] + R[2, 1]) / s
+        z = 0.25 * s
+    return np.array([x, y, z, w])
+
+
+def _load_ref_tartanair(exe_args: list) -> "np.ndarray | None":
+    """
+    GT: <sequence_root>/pose_left.txt  — N×7 (tx ty tz qx qy qz qw, no timestamps)
+    Timestamps from imu/cam_time.npy (ns) or imu/cam_time.txt (s), else 10 Hz.
+    """
+    if len(exe_args) < 4:
+        return None
+    seq = Path(exe_args[3])
+    gt_file = seq / "pose_left.txt"
+    if not gt_file.exists():
+        print(f"  GT not found: {gt_file}", file=sys.stderr)
+        return None
+
+    poses = np.loadtxt(str(gt_file), dtype=np.float64)
+    if poses.ndim == 1:
+        poses = poses.reshape(1, -1)
+    N = len(poses)
+
+    ts_npy = seq / "imu" / "cam_time.npy"
+    ts_txt = seq / "imu" / "cam_time.txt"
+    if ts_npy.exists():
+        ts = np.load(str(ts_npy)).astype(np.float64).ravel()
+        if ts.max() > 1e9:
+            ts /= 1e9
+    elif ts_txt.exists():
+        ts = np.loadtxt(str(ts_txt), dtype=np.float64).ravel()
+        if ts.max() > 1e9:
+            ts /= 1e9
+    else:
+        ts = np.arange(N, dtype=np.float64) * 0.1
+
+    ts = ts[:N]
+    return np.column_stack([ts, poses[:N]])
+
+
+def _load_ref_tartanair2(exe_args: list) -> "np.ndarray | None":
+    """
+    GT: <sequence_root>/pose_lcam_front.txt  — N×7 (tx ty tz qx qy qz qw)
+    Timestamps from imu/cam_time.txt (s) or 10 Hz fallback.
+    """
+    if len(exe_args) < 4:
+        return None
+    seq = Path(exe_args[3])
+    gt_file = seq / "pose_lcam_front.txt"
+    if not gt_file.exists():
+        print(f"  GT not found: {gt_file}", file=sys.stderr)
+        return None
+
+    poses = np.loadtxt(str(gt_file), dtype=np.float64)
+    if poses.ndim == 1:
+        poses = poses.reshape(1, -1)
+    N = len(poses)
+
+    ts_txt = seq / "imu" / "cam_time.txt"
+    if ts_txt.exists():
+        ts = np.loadtxt(str(ts_txt), dtype=np.float64).ravel()
+        if ts.max() > 1e9:
+            ts /= 1e9
+    else:
+        ts = np.arange(N, dtype=np.float64) * 0.1
+
+    ts = ts[:N]
+    return np.column_stack([ts, poses[:N]])
+
+
+def _load_ref_vbr(exe_args: list) -> "np.ndarray | None":
+    """
+    GT: <sequence_root>/<sequence_name>_gt.txt
+    Columns: timestamp_s tx ty tz qx qy qz qw  (already in sandbox format)
+    """
+    if len(exe_args) < 4:
+        return None
+    seq = Path(exe_args[3])
+    gt_file = seq / f"{seq.name}_gt.txt"
+    if not gt_file.exists():
+        candidates = list(seq.glob("*_gt.txt"))
+        if not candidates:
+            print(f"  GT not found in {seq}", file=sys.stderr)
+            return None
+        gt_file = candidates[0]
+
+    data = np.loadtxt(str(gt_file), dtype=np.float64)
+    if data.ndim == 1:
+        data = data.reshape(1, -1)
+    return data  # [timestamp, tx, ty, tz, qx, qy, qz, qw]
+
+
+def _load_ref_eiva(exe_args: list) -> "np.ndarray | None":
+    """
+    GT: <sequence_root>/pose_gt.txt
+    Columns: image_filename tx ty tz R00 R01 R02 R10 R11 R12 R20 R21 R22
+    Timestamp parsed from filename: SYSTEM_YYYY-MM-DDTHHMMSS.ffffff_
+    Rotation matrix is converted to quaternion (xyzw).
+    """
+    from datetime import datetime, timezone
+    
+    def zephyr_filename_to_ns(filename):
+        # Extract timestamp from filename
+        match1 = re.search(r'(\d{4}-\d{2}-\d{2}T\d{6}\.\d+)', filename)
+        match2 = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d+)', filename)
+        if match1:
+            timestamp_str = match1.group(0)
+            timestamp_dt = datetime.strptime(
+                timestamp_str,
+                '%Y-%m-%dT%H%M%S.%f'
+            )
+            nanoseconds = float(timestamp_dt.timestamp() * 1e9)
+        elif match2:
+            timestamp_str = match2.group(0)
+            timestamp_dt = datetime.strptime(
+                timestamp_str,
+                '%Y-%m-%dT%H-%M-%S-%f'
+            )
+            nanoseconds = float(timestamp_dt.timestamp() * 1e9)
+        else:
+            raise ValueError(f"Could not extract timestamp from filename: {filename}")  # noqa
+
+        return nanoseconds
+
+    if len(exe_args) < 4:
+        return None
+    gt_file = Path(exe_args[3]) / "pose_gt.txt"
+    if not gt_file.exists():
+        print(f"  GT not found: {gt_file}", file=sys.stderr)
+        return None
+
+    rows = []
+    with open(gt_file) as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 13:
+                continue
+            try:
+                ts = zephyr_filename_to_ns(parts[0])
+                tx, ty, tz = float(parts[1]), float(parts[2]), float(parts[3])
+                R = np.array([
+                    [float(parts[4]),  float(parts[5]),  float(parts[6])],
+                    [float(parts[7]),  float(parts[8]),  float(parts[9])],
+                    [float(parts[10]), float(parts[11]), float(parts[12])],
+                ], dtype=np.float64)
+                qxyzw = _rotmat_to_quat(R)
+                rows.append([ts, tx, ty, tz] + list(qxyzw))
+            except (ValueError, IndexError):
+                continue
+
+    return np.array(rows, dtype=np.float64) if rows else None
+
+
+def _load_ref_eiffeltower(exe_args: list) -> "np.ndarray | None":
+    """
+    GT: <sequence_root>/sfm/images.txt  (COLMAP images.txt)
+    Each pose line: IMAGE_ID QW QX QY QZ TX TY TZ CAMERA_ID NAME
+    Timestamps parsed from NAME (YYYYMMDDTHHMMSS.fffZ.jpg).
+    """
+    if len(exe_args) < 4:
+        return None
+    img_file = Path(exe_args[3]) / "sfm" / "images.txt"
+    if not img_file.exists():
+        print(f"  GT not found: {img_file}", file=sys.stderr)
+        return None
+
+    from datetime import datetime, timezone
+
+    def _parse_ts(name: str) -> float:
+        stem = name.rsplit(".", 1)[0].rstrip("Z")
+        dot = stem.find(".")
+        if dot == -1:
+            dt = datetime.strptime(stem, "%Y%m%dT%H%M%S")
+            return dt.replace(tzinfo=timezone.utc).timestamp()
+        dt = datetime.strptime(stem[:dot], "%Y%m%dT%H%M%S")
+        frac = float("0" + stem[dot:])
+        return dt.replace(tzinfo=timezone.utc).timestamp() + frac
+
+    rows = []
+    with open(img_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            # Pose lines have exactly 10 fields; keypoint lines have variable count
+            if len(parts) != 10:
+                continue
+            try:
+                int(parts[0])  # IMAGE_ID must be an integer
+                qw, qx, qy, qz = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+                tx, ty, tz = float(parts[5]), float(parts[6]), float(parts[7])
+                name = parts[9]
+                ts = _parse_ts(name)
+                rows.append([ts, tx, ty, tz, qx, qy, qz, qw])
+            except (ValueError, IndexError):
+                continue
+
+    if not rows:
+        return None
+    arr = np.array(rows, dtype=np.float64)
+    return arr[arr[:, 0].argsort()]  # sort by timestamp
+
+
 # Map executable stem -> GT loader function
 _GT_LOADERS = {
     "mono_aqualoc":           _load_ref_aqualoc,
@@ -256,6 +485,12 @@ _GT_LOADERS = {
     "stereo_euroc":           _load_ref_euroc,
     "mono_inertial_euroc":    _load_ref_euroc,
     "stereo_inertial_euroc":  _load_ref_euroc,
+    "mono_tartanair":         _load_ref_tartanair,
+    "mono_tartanair2":        _load_ref_tartanair2,
+    "stereo_vbr":             _load_ref_vbr,
+    "stereo_eiva":            _load_ref_eiva,
+    "mono_eiva":              _load_ref_eiva,
+    "mono_eiffeltower":       _load_ref_eiffeltower,
 }
 
 

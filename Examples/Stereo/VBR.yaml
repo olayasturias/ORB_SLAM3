@@ -1,0 +1,75 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters — VBR dataset
+# Fill Camera1/Camera2 intrinsics and Stereo.T_c1_c2 from the sequence's vbr_calib.yaml:
+#   intrinsics: {Fx, Fy, Cx, Cy}  (same for both cameras if symmetric)
+#   T_b: 4x4 extrinsic matrix (left-to-right camera transform)
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+Camera1.fx: 0.0   # FIXME: vbr_calib.yaml → intrinsics.Fx
+Camera1.fy: 0.0   # FIXME: vbr_calib.yaml → intrinsics.Fy
+Camera1.cx: 0.0   # FIXME: vbr_calib.yaml → intrinsics.Cx
+Camera1.cy: 0.0   # FIXME: vbr_calib.yaml → intrinsics.Cy
+
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
+
+Camera2.fx: 0.0   # FIXME
+Camera2.fy: 0.0   # FIXME
+Camera2.cx: 0.0   # FIXME
+Camera2.cy: 0.0   # FIXME
+
+Camera2.k1: 0.0
+Camera2.k2: 0.0
+Camera2.p1: 0.0
+Camera2.p2: 0.0
+
+Camera.width: 0   # FIXME
+Camera.height: 0  # FIXME
+
+Camera.fps: 10
+
+Camera.RGB: 1
+
+# Threshold on depth (meters) for stereo points; ~40× baseline is typical
+Stereo.ThDepth: 40.0
+
+# Left-to-right camera transform: FIXME — fill from vbr_calib.yaml T_b
+Stereo.T_c1_c2: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: f
+  data: [1,0,0,0,
+         0,1,0,0,
+         0,0,1,0,
+         0,0,0,1]
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+ORBextractor.nFeatures: 1200
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0

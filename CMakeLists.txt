@@ -182,6 +182,14 @@ add_executable(stereo_tum_vi
         Examples/Stereo/stereo_tum_vi.cc)
 target_link_libraries(stereo_tum_vi ${PROJECT_NAME})
 
+add_executable(stereo_vbr
+        Examples/Stereo/stereo_vbr.cc)
+target_link_libraries(stereo_vbr ${PROJECT_NAME})
+
+add_executable(stereo_eiva
+        Examples/Stereo/stereo_eiva.cc)
+target_link_libraries(stereo_eiva ${PROJECT_NAME})
+
 if(realsense2_FOUND)
     add_executable(stereo_realsense_t265
             Examples/Stereo/stereo_realsense_t265.cc)
@@ -222,6 +230,22 @@ target_link_libraries(mono_mimir ${PROJECT_NAME})
 add_executable(mono_subpipe
         Examples/Monocular/mono_subpipe.cc)
 target_link_libraries(mono_subpipe ${PROJECT_NAME})
+
+add_executable(mono_tartanair
+        Examples/Monocular/mono_tartanair.cc)
+target_link_libraries(mono_tartanair ${PROJECT_NAME})
+
+add_executable(mono_tartanair2
+        Examples/Monocular/mono_tartanair2.cc)
+target_link_libraries(mono_tartanair2 ${PROJECT_NAME})
+
+add_executable(mono_eiffeltower
+        Examples/Monocular/mono_eiffeltower.cc)
+target_link_libraries(mono_eiffeltower ${PROJECT_NAME})
+
+add_executable(mono_eiva
+        Examples/Monocular/mono_eiva.cc)
+target_link_libraries(mono_eiva ${PROJECT_NAME})
 
 if(realsense2_FOUND)
     add_executable(mono_realsense_t265

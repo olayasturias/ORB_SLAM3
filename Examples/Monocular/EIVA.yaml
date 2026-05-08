@@ -1,0 +1,50 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters — EIVA dataset (monocular, left camera)
+# Fill intrinsics from <sequence>/processed/resized_sensor.yaml
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+Camera1.fx: 1847.5905420747683   # FIXME: resized_sensor.yaml left camera fx
+Camera1.fy: 1847.5905420747683   # FIXME: resized_sensor.yaml left camera fy
+Camera1.cx: 1391.3   # FIXME: resized_sensor.yaml left camera cx
+Camera1.cy: 1407.177   # FIXME: resized_sensor.yaml left camera cy
+
+Camera1.k1: 0.0   # FIXME: radial distortion k1
+Camera1.k2: 0.0   # FIXME: radial distortion k2
+Camera1.p1: 0.0   # FIXME: tangential p1
+Camera1.p2: 0.0   # FIXME: tangential p2
+
+Camera.width: 2816   # FIXME
+Camera.height: 2816  # FIXME
+
+Camera.fps: 5
+
+Camera.RGB: 1
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+ORBextractor.nFeatures: 1200
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
