@@ -340,7 +340,7 @@ void Viewer::Run()
             uint32_t w = static_cast<uint32_t>(rgb.cols);
             std::vector<uint8_t> imgData(rgb.data, rgb.data + w * h * 3);
             mrec->set_time_seconds("slam_time", ts);
-            mrec->log("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
+            mrec->log_static("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
             mrec->reset_time();
         }
 

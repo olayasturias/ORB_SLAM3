@@ -1,0 +1,51 @@
+runs:
+  - project: EIVA_plane_nose
+    exe_args:
+      - Examples\Monocular\Release\mono_eiva.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\EIVA.yaml
+      - D:\Datasets\EIVA\plane_nose
+
+  - project: EIVA_Welland_test_first_dive
+    exe_args:
+      - Examples\Monocular\Release\mono_eiva.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\EIVA.yaml
+      - D:\Datasets\EIVA\Welland_test_first_dive
+
+  - project: EIVA_plane_tail1
+    exe_args:
+      - Examples\Monocular\Release\mono_eiva.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\EIVA.yaml
+      - D:\Datasets\EIVA\plane_tail1
+
+  - project: aqualoc_archaeological_site_1
+    exe_args:
+      - Examples\Monocular\Release\mono_aqualoc.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\Aqualoc.yaml
+      - D:\Datasets\Aqualoc\Archaeological_site_sequences
+      - "1"
+
+  - project: MH04
+    exe_args:
+      - Examples\Monocular\Release\mono_euroc.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\EuRoC.yaml
+      - D:\Datasets\EuRoC\MH_04_difficult
+      - Examples\Monocular-Inertial\EuRoC_TimeStamps\MH04.txt
+
+  - project: EiffelTower2020
+    exe_args:
+      - Examples\Monocular\Release\mono_eiffeltower.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\EiffelTower.yaml
+      - D:\Datasets\EiffelTower
+
+  - project: oldtown_Easy_P000
+    exe_args:
+      - Examples\Monocular\Release\mono_tartanair.exe
+      - Vocabulary\ORBvoc.txt
+      - Examples\Monocular\TartanAir.yaml
+      - D:\Datasets\TartanAir\oldtown\Easy\P000
