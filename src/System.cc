@@ -1827,6 +1827,11 @@ float System::GetImageScale()
     return mpTracker->GetImageScale();
 }
 
+rerun::RecordingStream* System::GetRecorder()
+{
+    return mpViewer ? &mpViewer->GetRecorder() : nullptr;
+}
+
 #ifdef REGISTER_TIMES
 void System::InsertRectTime(double& time)
 {

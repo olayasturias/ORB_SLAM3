@@ -330,6 +330,7 @@ void Viewer::Run()
         cv::Mat rawIm = mpFrameDrawer->GetRawImage();
         if (!rawIm.empty())
         {
+            double ts = mpFrameDrawer->GetCurrentTimestamp();
             cv::Mat rgb;
             if(rawIm.channels() == 1)
                 cv::cvtColor(rawIm, rgb, cv::COLOR_GRAY2RGB);
@@ -338,7 +339,9 @@ void Viewer::Run()
             uint32_t h = static_cast<uint32_t>(rgb.rows);
             uint32_t w = static_cast<uint32_t>(rgb.cols);
             std::vector<uint8_t> imgData(rgb.data, rgb.data + w * h * 3);
-            mrec->log_static("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
+            mrec->set_time_seconds("slam_time", ts);
+            mrec->log("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
+            mrec->reset_time();
         }
 
         auto keypoints = mpFrameDrawer->GetCurrentKeypoints();
@@ -423,6 +426,11 @@ void Viewer::Release()
 {
     unique_lock<mutex> lock(mMutexStop);
     mbStopped = false;
+}
+
+rerun::RecordingStream& Viewer::GetRecorder()
+{
+    return *mrec;
 }
 
 }

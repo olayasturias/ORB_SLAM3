@@ -52,6 +52,8 @@ static inline void usleep(unsigned int us) {
 #include "Settings.h"
 
 
+namespace rerun { class RecordingStream; }
+
 namespace ORB_SLAM3
 {
 
@@ -202,6 +204,9 @@ public:
     void ChangeDataset();
 
     float GetImageScale();
+
+    // Returns the Rerun recorder owned by the Viewer (null if viewer is disabled).
+    rerun::RecordingStream* GetRecorder();
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
