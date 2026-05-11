@@ -25,7 +25,6 @@
 #include<opencv2/imgproc/imgproc.hpp>
 
 #include<System.h>
-#include<rerun.hpp>
 
 using namespace std;
 
@@ -86,7 +85,6 @@ int main(int argc, char **argv)
 
     ORB_SLAM3::System SLAM(argv[1], argv[2], ORB_SLAM3::System::MONOCULAR, true);
     float imageScale = SLAM.GetImageScale();
-    rerun::RecordingStream* rec = SLAM.GetRecorder();
 
     vector<float> vTimesTrack(nImages);
     cv::Mat im;
@@ -98,20 +96,6 @@ int main(int argc, char **argv)
             cv::resize(im, im, cv::Size((int)(im.cols*imageScale), (int)(im.rows*imageScale)));
 
         const double tframe = vTimestamps[ni];
-
-        if(rec)
-        {
-            cv::Mat rgb;
-            if(im.channels() == 1)
-                cv::cvtColor(im, rgb, cv::COLOR_GRAY2RGB);
-            else
-                cv::cvtColor(im, rgb, cv::COLOR_BGR2RGB);
-            uint32_t h = (uint32_t)rgb.rows, w = (uint32_t)rgb.cols;
-            std::vector<uint8_t> imgData(rgb.data, rgb.data + (size_t)w * h * 3);
-            rec->set_time_seconds("slam_time", tframe);
-            rec->log("world/camera/image/rgb", rerun::Image::from_rgb24(imgData, {w, h}));
-            rec->reset_time();
-        }
 
 #ifdef COMPILEDWITHC11
         auto t1 = std::chrono::steady_clock::now();

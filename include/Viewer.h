@@ -63,8 +63,6 @@ public:
 
     void Release();
 
-    rerun::RecordingStream& GetRecorder();
-
     //void SetTrackingPause();
 
 private:

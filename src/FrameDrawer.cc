@@ -213,12 +213,6 @@ std::vector<cv::KeyPoint> FrameDrawer::GetCurrentKeypoints()
     return mvCurrentKeys;
 }
 
-double FrameDrawer::GetCurrentTimestamp()
-{
-    unique_lock<mutex> lock(mMutex);
-    return mCurrentFrame.mTimeStamp;
-}
-
 std::string FrameDrawer::GetStatusString()
 {
     unique_lock<mutex> lock(mMutex);

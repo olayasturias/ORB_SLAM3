@@ -52,7 +52,6 @@ public:
     cv::Mat GetRawImage();
     std::vector<cv::KeyPoint> GetCurrentKeypoints();
     std::string GetStatusString();
-    double GetCurrentTimestamp();
 
     bool both;
 
